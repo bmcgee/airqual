@@ -1,0 +1,35 @@
+body.good {
+  background-color: #68e143;
+}
+
+body.moderate {
+  background-color: #ffff55;
+}
+
+body.unhealthy-for-sensitive-groups {
+  background-color: #ef8533;
+}
+
+body.unhealthy {
+  background-color: #ea3324;
+  color: #fff;
+}
+
+body.very-unhealthy {
+  background-color: #8c1a4b;
+  color: #fff;
+}
+
+body.hazardous {
+  background-color: #8c1a4b;
+  color: #fff;
+}
+
+body.very-hazardous {
+  background-color: #731425;
+  color: #fff;
+}
+
+body .maybe-show {
+  display: none;
+}
