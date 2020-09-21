@@ -1,6 +1,17 @@
 <script>
   import purpleair from "purpleair";
   import { interpolateRgbBasis } from "d3-interpolate";
+  import { aqanduAQIFromPM } from "./aqicalc";
+
+  // const getStats = (async () => {
+  //   const response = await fetch("purple.json");
+  //   let data = await response.json();
+  //   let stats = {
+  //     prev: JSON.parse(data["results"][0]["Stats"]),
+  //     aqi: aqanduAQIFromPM(data["results"][0]["PM2_5Value"])
+  //   };
+  //   console.log(stats);
+  // })();
 
   const purple = (async () => {
     //closer one
@@ -10,14 +21,14 @@
     var aqiClass = await purpleair.getAQIClass(aqi);
     // var stats = await purple.getAQIStats();
 
-    console.log(aqi);
+    // console.log(aqi);
     let data = {
       aqi: await purpleair.getAQI(sensor),
       aqiClass: await purpleair.getAQIClass(aqi),
       stats: await purpleair.getAQIStats(sensor)
     };
 
-    console.log(data);
+    // console.log(data);
 
     return await data;
   })();
@@ -82,6 +93,12 @@
 </style>
 
 <main>
+  <!-- {#await getStats}
+    <p>..wait</p>
+  {:then stats}
+    {stats}
+  {/await} -->
+
   {#await purple}
     <p>...waiting</p>
   {:then data}
@@ -89,7 +106,12 @@
       <p>{data.aqi}</p>
     </div>
     <p>{data.aqiClass}</p>
-
+    {#each data.stats as stat}
+      <span>
+        Name: {stat.time} Value: {aqanduAQIFromPM(stat.val)}
+        <br />
+      </span>
+    {/each}
   {:catch error}
     <p>error</p>
   {/await}
