@@ -20,13 +20,11 @@
     var sensor = await purpleair.getSensor(56109);
     var aqi = await purpleair.getAQI(sensor);
     var aqiClass = await purpleair.getAQIClass(aqi);
-    // var stats = await purple.getAQIStats();
 
     // console.log(aqi);
     let data = {
       aqi: await purpleair.getAQI(sensor),
-      aqiClass: await purpleair.getAQIClass(aqi),
-      stats: await purpleair.getAQIStats(sensor)
+      aqiClass: await purpleair.getAQIClass(aqi)
     };
 
     // console.log(data);
