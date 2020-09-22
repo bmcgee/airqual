@@ -1,52 +1,26 @@
 <script>
-  import purpleair from "purpleair";
+
   import Dot from "./Dot.svelte";
-  import { interpolateRgbBasis } from "d3-interpolate";
-  import { aqanduAQIFromPM } from "./aqicalc";
+  import { aqiUpOrDown, aqanduAQIFromPM, getAQIDescription, aqiStatParse, aqiColorParse, getAQIMessage } from "./aqicalc";
+import aqi from "purpleair";
+import { validate_component } from "svelte/internal";
 
-  // const getStats = (async () => {
-  //   const response = await fetch("purple.json");
-  //   let data = await response.json();
-  //   let stats = {
-  //     prev: JSON.parse(data["results"][0]["Stats"]),
-  //     aqi: aqanduAQIFromPM(data["results"][0]["PM2_5Value"])
-  //   };
-  //   console.log(stats);
-  // })();
+  //   //hill dr 56109
 
-  const purple = (async () => {
-    //closer one
-    //hill dr 56109
-    var sensor = await purpleair.getSensor(56109);
-    var aqi = await purpleair.getAQI(sensor);
-    var aqiClass = await purpleair.getAQIClass(aqi);
-
-    // console.log(aqi);
-    let data = {
-      aqi: await purpleair.getAQI(sensor),
-      aqiClass: await purpleair.getAQIClass(aqi)
+  const sensorData = (async () => {
+    const response = await fetch("https://www.purpleair.com/json?show=56109");
+    const json = await response.json();
+    const pm  = await json['results'][0]['PM2_5Value'];
+    const stats = await JSON.parse(json["results"][0]["Stats"]);
+    let data = await {
+      aqi: aqanduAQIFromPM(pm),
+      previous: aqiStatParse(stats),
     };
-
-    // console.log(data);
-
+    console.log(data);
     return await data;
   })();
 
-  let getAQIcolor = function(c) {
-    let color = interpolateRgbBasis([
-      "green",
-      "yellow",
-      "orange",
-      "red",
-      "purple",
-      "purple",
-      "maroon",
-      "maroon",
-      "maroon",
-      "maroon"
-    ])(c / 500);
-    return color;
-  };
+  
 </script>
 
 <style>
@@ -55,45 +29,47 @@
     padding: 1em;
     max-width: 240px;
     margin: 0 auto;
-  }
-
-  h1 {
-    color: #ff3e00;
-    text-transform: uppercase;
-    font-size: 4em;
-    font-weight: 100;
+    font-family: monospace;
   }
 
   .flex-container {
     display: flex;
+  }
+  .sub {
+    width: 100%;
   }
   @media (min-width: 640px) {
     main {
       max-width: none;
     }
   }
+  /* p {
+    padding: 0px;
+  } */
 </style>
 
 <main>
-  <!-- {#await getStats}
-    <p>..wait</p>
-  {:then stats}
-    {stats}
-  {/await} -->
-
-  {#await purple}
+  {#await sensorData}
     <p>...waiting</p>
   {:then data}
     <big>
-      <Dot aqi={data.aqi} />
+      <Dot aqi={data.aqi} time="Now" />
+      <p>{getAQIDescription(data.aqi)}</p>
+      <p>{getAQIMessage(data.aqi)}</p>
+
+
     </big>
 
     <div class="flex-container">
-      {#each data.stats as stat}
-        <Dot aqi={aqanduAQIFromPM(stat.val)} />
+      {#each Object.entries(data.previous) as [time,val]}
+        <div class="sub">
+          <Dot aqi={aqanduAQIFromPM(val)} />
+          <p style="height: auto; background-color: {aqiUpOrDown(data.aqi, aqanduAQIFromPM(val))}">{time}</p>
+        </div>
+       
       {/each}
     </div>
-
+    
   {:catch error}
     <p>error</p>
   {/await}

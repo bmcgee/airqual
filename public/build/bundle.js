@@ -40,8 +40,17 @@ var app = (function () {
     function detach(node) {
         node.parentNode.removeChild(node);
     }
+    function destroy_each(iterations, detaching) {
+        for (let i = 0; i < iterations.length; i += 1) {
+            if (iterations[i])
+                iterations[i].d(detaching);
+        }
+    }
     function element(name) {
         return document.createElement(name);
+    }
+    function svg_element(name) {
+        return document.createElementNS('http://www.w3.org/2000/svg', name);
     }
     function text(data) {
         return document.createTextNode(data);
@@ -252,6 +261,17 @@ var app = (function () {
         : typeof globalThis !== 'undefined'
             ? globalThis
             : global);
+    function validate_component(component, name) {
+        if (!component || !component.$$render) {
+            if (name === 'svelte:component')
+                name += ' this={...}';
+            throw new Error(`<${name}> is not a valid SSR component. You may need to review your build config to ensure that dependencies are compiled, rather than imported as pre-compiled modules`);
+        }
+        return component;
+    }
+    function create_component(block) {
+        block && block.c();
+    }
     function mount_component(component, target, anchor) {
         const { fragment, on_mount, on_destroy, after_update } = component.$$;
         fragment && fragment.m(target, anchor);
@@ -393,6 +413,22 @@ var app = (function () {
         else
             dispatch_dev("SvelteDOMSetAttribute", { node, attribute, value });
     }
+    function set_data_dev(text, data) {
+        data = '' + data;
+        if (text.wholeText === data)
+            return;
+        dispatch_dev("SvelteDOMSetData", { node: text, data });
+        text.data = data;
+    }
+    function validate_each_argument(arg) {
+        if (typeof arg !== 'string' && !(arg && typeof arg === 'object' && 'length' in arg)) {
+            let msg = '{#each} only iterates over array-like objects.';
+            if (typeof Symbol === 'function' && arg && Symbol.iterator in arg) {
+                msg += ' You can use a spread to convert this iterable into an array.';
+            }
+            throw new Error(msg);
+        }
+    }
     function validate_slots(name, slot, keys) {
         for (const slot_key of Object.keys(slot)) {
             if (!~keys.indexOf(slot_key)) {
@@ -415,6 +451,712 @@ var app = (function () {
         }
         $capture_state() { }
         $inject_state() { }
+    }
+
+    function define(constructor, factory, prototype) {
+      constructor.prototype = factory.prototype = prototype;
+      prototype.constructor = constructor;
+    }
+
+    function extend(parent, definition) {
+      var prototype = Object.create(parent.prototype);
+      for (var key in definition) prototype[key] = definition[key];
+      return prototype;
+    }
+
+    function Color() {}
+
+    var darker = 0.7;
+    var brighter = 1 / darker;
+
+    var reI = "\\s*([+-]?\\d+)\\s*",
+        reN = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)\\s*",
+        reP = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)%\\s*",
+        reHex = /^#([0-9a-f]{3,8})$/,
+        reRgbInteger = new RegExp("^rgb\\(" + [reI, reI, reI] + "\\)$"),
+        reRgbPercent = new RegExp("^rgb\\(" + [reP, reP, reP] + "\\)$"),
+        reRgbaInteger = new RegExp("^rgba\\(" + [reI, reI, reI, reN] + "\\)$"),
+        reRgbaPercent = new RegExp("^rgba\\(" + [reP, reP, reP, reN] + "\\)$"),
+        reHslPercent = new RegExp("^hsl\\(" + [reN, reP, reP] + "\\)$"),
+        reHslaPercent = new RegExp("^hsla\\(" + [reN, reP, reP, reN] + "\\)$");
+
+    var named = {
+      aliceblue: 0xf0f8ff,
+      antiquewhite: 0xfaebd7,
+      aqua: 0x00ffff,
+      aquamarine: 0x7fffd4,
+      azure: 0xf0ffff,
+      beige: 0xf5f5dc,
+      bisque: 0xffe4c4,
+      black: 0x000000,
+      blanchedalmond: 0xffebcd,
+      blue: 0x0000ff,
+      blueviolet: 0x8a2be2,
+      brown: 0xa52a2a,
+      burlywood: 0xdeb887,
+      cadetblue: 0x5f9ea0,
+      chartreuse: 0x7fff00,
+      chocolate: 0xd2691e,
+      coral: 0xff7f50,
+      cornflowerblue: 0x6495ed,
+      cornsilk: 0xfff8dc,
+      crimson: 0xdc143c,
+      cyan: 0x00ffff,
+      darkblue: 0x00008b,
+      darkcyan: 0x008b8b,
+      darkgoldenrod: 0xb8860b,
+      darkgray: 0xa9a9a9,
+      darkgreen: 0x006400,
+      darkgrey: 0xa9a9a9,
+      darkkhaki: 0xbdb76b,
+      darkmagenta: 0x8b008b,
+      darkolivegreen: 0x556b2f,
+      darkorange: 0xff8c00,
+      darkorchid: 0x9932cc,
+      darkred: 0x8b0000,
+      darksalmon: 0xe9967a,
+      darkseagreen: 0x8fbc8f,
+      darkslateblue: 0x483d8b,
+      darkslategray: 0x2f4f4f,
+      darkslategrey: 0x2f4f4f,
+      darkturquoise: 0x00ced1,
+      darkviolet: 0x9400d3,
+      deeppink: 0xff1493,
+      deepskyblue: 0x00bfff,
+      dimgray: 0x696969,
+      dimgrey: 0x696969,
+      dodgerblue: 0x1e90ff,
+      firebrick: 0xb22222,
+      floralwhite: 0xfffaf0,
+      forestgreen: 0x228b22,
+      fuchsia: 0xff00ff,
+      gainsboro: 0xdcdcdc,
+      ghostwhite: 0xf8f8ff,
+      gold: 0xffd700,
+      goldenrod: 0xdaa520,
+      gray: 0x808080,
+      green: 0x008000,
+      greenyellow: 0xadff2f,
+      grey: 0x808080,
+      honeydew: 0xf0fff0,
+      hotpink: 0xff69b4,
+      indianred: 0xcd5c5c,
+      indigo: 0x4b0082,
+      ivory: 0xfffff0,
+      khaki: 0xf0e68c,
+      lavender: 0xe6e6fa,
+      lavenderblush: 0xfff0f5,
+      lawngreen: 0x7cfc00,
+      lemonchiffon: 0xfffacd,
+      lightblue: 0xadd8e6,
+      lightcoral: 0xf08080,
+      lightcyan: 0xe0ffff,
+      lightgoldenrodyellow: 0xfafad2,
+      lightgray: 0xd3d3d3,
+      lightgreen: 0x90ee90,
+      lightgrey: 0xd3d3d3,
+      lightpink: 0xffb6c1,
+      lightsalmon: 0xffa07a,
+      lightseagreen: 0x20b2aa,
+      lightskyblue: 0x87cefa,
+      lightslategray: 0x778899,
+      lightslategrey: 0x778899,
+      lightsteelblue: 0xb0c4de,
+      lightyellow: 0xffffe0,
+      lime: 0x00ff00,
+      limegreen: 0x32cd32,
+      linen: 0xfaf0e6,
+      magenta: 0xff00ff,
+      maroon: 0x800000,
+      mediumaquamarine: 0x66cdaa,
+      mediumblue: 0x0000cd,
+      mediumorchid: 0xba55d3,
+      mediumpurple: 0x9370db,
+      mediumseagreen: 0x3cb371,
+      mediumslateblue: 0x7b68ee,
+      mediumspringgreen: 0x00fa9a,
+      mediumturquoise: 0x48d1cc,
+      mediumvioletred: 0xc71585,
+      midnightblue: 0x191970,
+      mintcream: 0xf5fffa,
+      mistyrose: 0xffe4e1,
+      moccasin: 0xffe4b5,
+      navajowhite: 0xffdead,
+      navy: 0x000080,
+      oldlace: 0xfdf5e6,
+      olive: 0x808000,
+      olivedrab: 0x6b8e23,
+      orange: 0xffa500,
+      orangered: 0xff4500,
+      orchid: 0xda70d6,
+      palegoldenrod: 0xeee8aa,
+      palegreen: 0x98fb98,
+      paleturquoise: 0xafeeee,
+      palevioletred: 0xdb7093,
+      papayawhip: 0xffefd5,
+      peachpuff: 0xffdab9,
+      peru: 0xcd853f,
+      pink: 0xffc0cb,
+      plum: 0xdda0dd,
+      powderblue: 0xb0e0e6,
+      purple: 0x800080,
+      rebeccapurple: 0x663399,
+      red: 0xff0000,
+      rosybrown: 0xbc8f8f,
+      royalblue: 0x4169e1,
+      saddlebrown: 0x8b4513,
+      salmon: 0xfa8072,
+      sandybrown: 0xf4a460,
+      seagreen: 0x2e8b57,
+      seashell: 0xfff5ee,
+      sienna: 0xa0522d,
+      silver: 0xc0c0c0,
+      skyblue: 0x87ceeb,
+      slateblue: 0x6a5acd,
+      slategray: 0x708090,
+      slategrey: 0x708090,
+      snow: 0xfffafa,
+      springgreen: 0x00ff7f,
+      steelblue: 0x4682b4,
+      tan: 0xd2b48c,
+      teal: 0x008080,
+      thistle: 0xd8bfd8,
+      tomato: 0xff6347,
+      turquoise: 0x40e0d0,
+      violet: 0xee82ee,
+      wheat: 0xf5deb3,
+      white: 0xffffff,
+      whitesmoke: 0xf5f5f5,
+      yellow: 0xffff00,
+      yellowgreen: 0x9acd32
+    };
+
+    define(Color, color, {
+      copy: function(channels) {
+        return Object.assign(new this.constructor, this, channels);
+      },
+      displayable: function() {
+        return this.rgb().displayable();
+      },
+      hex: color_formatHex, // Deprecated! Use color.formatHex.
+      formatHex: color_formatHex,
+      formatHsl: color_formatHsl,
+      formatRgb: color_formatRgb,
+      toString: color_formatRgb
+    });
+
+    function color_formatHex() {
+      return this.rgb().formatHex();
+    }
+
+    function color_formatHsl() {
+      return hslConvert(this).formatHsl();
+    }
+
+    function color_formatRgb() {
+      return this.rgb().formatRgb();
+    }
+
+    function color(format) {
+      var m, l;
+      format = (format + "").trim().toLowerCase();
+      return (m = reHex.exec(format)) ? (l = m[1].length, m = parseInt(m[1], 16), l === 6 ? rgbn(m) // #ff0000
+          : l === 3 ? new Rgb((m >> 8 & 0xf) | (m >> 4 & 0xf0), (m >> 4 & 0xf) | (m & 0xf0), ((m & 0xf) << 4) | (m & 0xf), 1) // #f00
+          : l === 8 ? rgba(m >> 24 & 0xff, m >> 16 & 0xff, m >> 8 & 0xff, (m & 0xff) / 0xff) // #ff000000
+          : l === 4 ? rgba((m >> 12 & 0xf) | (m >> 8 & 0xf0), (m >> 8 & 0xf) | (m >> 4 & 0xf0), (m >> 4 & 0xf) | (m & 0xf0), (((m & 0xf) << 4) | (m & 0xf)) / 0xff) // #f000
+          : null) // invalid hex
+          : (m = reRgbInteger.exec(format)) ? new Rgb(m[1], m[2], m[3], 1) // rgb(255, 0, 0)
+          : (m = reRgbPercent.exec(format)) ? new Rgb(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) // rgb(100%, 0%, 0%)
+          : (m = reRgbaInteger.exec(format)) ? rgba(m[1], m[2], m[3], m[4]) // rgba(255, 0, 0, 1)
+          : (m = reRgbaPercent.exec(format)) ? rgba(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, m[4]) // rgb(100%, 0%, 0%, 1)
+          : (m = reHslPercent.exec(format)) ? hsla(m[1], m[2] / 100, m[3] / 100, 1) // hsl(120, 50%, 50%)
+          : (m = reHslaPercent.exec(format)) ? hsla(m[1], m[2] / 100, m[3] / 100, m[4]) // hsla(120, 50%, 50%, 1)
+          : named.hasOwnProperty(format) ? rgbn(named[format]) // eslint-disable-line no-prototype-builtins
+          : format === "transparent" ? new Rgb(NaN, NaN, NaN, 0)
+          : null;
+    }
+
+    function rgbn(n) {
+      return new Rgb(n >> 16 & 0xff, n >> 8 & 0xff, n & 0xff, 1);
+    }
+
+    function rgba(r, g, b, a) {
+      if (a <= 0) r = g = b = NaN;
+      return new Rgb(r, g, b, a);
+    }
+
+    function rgbConvert(o) {
+      if (!(o instanceof Color)) o = color(o);
+      if (!o) return new Rgb;
+      o = o.rgb();
+      return new Rgb(o.r, o.g, o.b, o.opacity);
+    }
+
+    function rgb(r, g, b, opacity) {
+      return arguments.length === 1 ? rgbConvert(r) : new Rgb(r, g, b, opacity == null ? 1 : opacity);
+    }
+
+    function Rgb(r, g, b, opacity) {
+      this.r = +r;
+      this.g = +g;
+      this.b = +b;
+      this.opacity = +opacity;
+    }
+
+    define(Rgb, rgb, extend(Color, {
+      brighter: function(k) {
+        k = k == null ? brighter : Math.pow(brighter, k);
+        return new Rgb(this.r * k, this.g * k, this.b * k, this.opacity);
+      },
+      darker: function(k) {
+        k = k == null ? darker : Math.pow(darker, k);
+        return new Rgb(this.r * k, this.g * k, this.b * k, this.opacity);
+      },
+      rgb: function() {
+        return this;
+      },
+      displayable: function() {
+        return (-0.5 <= this.r && this.r < 255.5)
+            && (-0.5 <= this.g && this.g < 255.5)
+            && (-0.5 <= this.b && this.b < 255.5)
+            && (0 <= this.opacity && this.opacity <= 1);
+      },
+      hex: rgb_formatHex, // Deprecated! Use color.formatHex.
+      formatHex: rgb_formatHex,
+      formatRgb: rgb_formatRgb,
+      toString: rgb_formatRgb
+    }));
+
+    function rgb_formatHex() {
+      return "#" + hex(this.r) + hex(this.g) + hex(this.b);
+    }
+
+    function rgb_formatRgb() {
+      var a = this.opacity; a = isNaN(a) ? 1 : Math.max(0, Math.min(1, a));
+      return (a === 1 ? "rgb(" : "rgba(")
+          + Math.max(0, Math.min(255, Math.round(this.r) || 0)) + ", "
+          + Math.max(0, Math.min(255, Math.round(this.g) || 0)) + ", "
+          + Math.max(0, Math.min(255, Math.round(this.b) || 0))
+          + (a === 1 ? ")" : ", " + a + ")");
+    }
+
+    function hex(value) {
+      value = Math.max(0, Math.min(255, Math.round(value) || 0));
+      return (value < 16 ? "0" : "") + value.toString(16);
+    }
+
+    function hsla(h, s, l, a) {
+      if (a <= 0) h = s = l = NaN;
+      else if (l <= 0 || l >= 1) h = s = NaN;
+      else if (s <= 0) h = NaN;
+      return new Hsl(h, s, l, a);
+    }
+
+    function hslConvert(o) {
+      if (o instanceof Hsl) return new Hsl(o.h, o.s, o.l, o.opacity);
+      if (!(o instanceof Color)) o = color(o);
+      if (!o) return new Hsl;
+      if (o instanceof Hsl) return o;
+      o = o.rgb();
+      var r = o.r / 255,
+          g = o.g / 255,
+          b = o.b / 255,
+          min = Math.min(r, g, b),
+          max = Math.max(r, g, b),
+          h = NaN,
+          s = max - min,
+          l = (max + min) / 2;
+      if (s) {
+        if (r === max) h = (g - b) / s + (g < b) * 6;
+        else if (g === max) h = (b - r) / s + 2;
+        else h = (r - g) / s + 4;
+        s /= l < 0.5 ? max + min : 2 - max - min;
+        h *= 60;
+      } else {
+        s = l > 0 && l < 1 ? 0 : h;
+      }
+      return new Hsl(h, s, l, o.opacity);
+    }
+
+    function hsl(h, s, l, opacity) {
+      return arguments.length === 1 ? hslConvert(h) : new Hsl(h, s, l, opacity == null ? 1 : opacity);
+    }
+
+    function Hsl(h, s, l, opacity) {
+      this.h = +h;
+      this.s = +s;
+      this.l = +l;
+      this.opacity = +opacity;
+    }
+
+    define(Hsl, hsl, extend(Color, {
+      brighter: function(k) {
+        k = k == null ? brighter : Math.pow(brighter, k);
+        return new Hsl(this.h, this.s, this.l * k, this.opacity);
+      },
+      darker: function(k) {
+        k = k == null ? darker : Math.pow(darker, k);
+        return new Hsl(this.h, this.s, this.l * k, this.opacity);
+      },
+      rgb: function() {
+        var h = this.h % 360 + (this.h < 0) * 360,
+            s = isNaN(h) || isNaN(this.s) ? 0 : this.s,
+            l = this.l,
+            m2 = l + (l < 0.5 ? l : 1 - l) * s,
+            m1 = 2 * l - m2;
+        return new Rgb(
+          hsl2rgb(h >= 240 ? h - 240 : h + 120, m1, m2),
+          hsl2rgb(h, m1, m2),
+          hsl2rgb(h < 120 ? h + 240 : h - 120, m1, m2),
+          this.opacity
+        );
+      },
+      displayable: function() {
+        return (0 <= this.s && this.s <= 1 || isNaN(this.s))
+            && (0 <= this.l && this.l <= 1)
+            && (0 <= this.opacity && this.opacity <= 1);
+      },
+      formatHsl: function() {
+        var a = this.opacity; a = isNaN(a) ? 1 : Math.max(0, Math.min(1, a));
+        return (a === 1 ? "hsl(" : "hsla(")
+            + (this.h || 0) + ", "
+            + (this.s || 0) * 100 + "%, "
+            + (this.l || 0) * 100 + "%"
+            + (a === 1 ? ")" : ", " + a + ")");
+      }
+    }));
+
+    /* From FvD 13.37, CSS Color Module Level 3 */
+    function hsl2rgb(h, m1, m2) {
+      return (h < 60 ? m1 + (m2 - m1) * h / 60
+          : h < 180 ? m2
+          : h < 240 ? m1 + (m2 - m1) * (240 - h) / 60
+          : m1) * 255;
+    }
+
+    function basis(t1, v0, v1, v2, v3) {
+      var t2 = t1 * t1, t3 = t2 * t1;
+      return ((1 - 3 * t1 + 3 * t2 - t3) * v0
+          + (4 - 6 * t2 + 3 * t3) * v1
+          + (1 + 3 * t1 + 3 * t2 - 3 * t3) * v2
+          + t3 * v3) / 6;
+    }
+
+    function basis$1(values) {
+      var n = values.length - 1;
+      return function(t) {
+        var i = t <= 0 ? (t = 0) : t >= 1 ? (t = 1, n - 1) : Math.floor(t * n),
+            v1 = values[i],
+            v2 = values[i + 1],
+            v0 = i > 0 ? values[i - 1] : 2 * v1 - v2,
+            v3 = i < n - 1 ? values[i + 2] : 2 * v2 - v1;
+        return basis((t - i / n) * n, v0, v1, v2, v3);
+      };
+    }
+
+    function rgbSpline(spline) {
+      return function(colors) {
+        var n = colors.length,
+            r = new Array(n),
+            g = new Array(n),
+            b = new Array(n),
+            i, color;
+        for (i = 0; i < n; ++i) {
+          color = rgb(colors[i]);
+          r[i] = color.r || 0;
+          g[i] = color.g || 0;
+          b[i] = color.b || 0;
+        }
+        r = spline(r);
+        g = spline(g);
+        b = spline(b);
+        color.opacity = 1;
+        return function(t) {
+          color.r = r(t);
+          color.g = g(t);
+          color.b = b(t);
+          return color + "";
+        };
+      };
+    }
+
+    var rgbBasis = rgbSpline(basis$1);
+
+    function aqanduAQIFromPM(pm) {
+      return aqiFromPM(0.778 * pm + 2.65);
+    }
+
+    let getAQIcolor = function(aqi) {
+      let color = rgbBasis([
+        "green",
+        "yellow",
+        "orange",
+        "red",
+        "purple",
+        "purple",
+        "maroon",
+        "maroon",
+        "maroon",
+        "maroon"
+      ])(aqi / 500);
+      return color;
+    };
+
+    let aqiUpOrDown = function(aqi, val) {
+      let c; 
+      if (aqi < val) { 
+        c = "green";
+      } 
+      if ( aqi > val) { 
+        c = "red";
+      }
+      return c;
+    };
+
+    function aqiStatParse(stats) { 
+      let s = { 
+        // "current": stats['v'],
+        "10m": stats['v1'],
+        "30m": stats['v2'],
+        "01h": stats['v3'],
+        "06h": stats['v4'],
+        "24h": stats['v5'],
+        '01wk': stats['v6']
+      };
+      // console.log(s);
+      return s;
+    }
+
+    function aqiColorParse(aqi) {
+      let color = rgbBasis([
+        "green",
+        "yellow",
+        "orange",
+        "red",
+        "purple",
+        "purple",
+        "maroon",
+        "maroon",
+        "maroon",
+        "maroon"
+      ])(aqi / 500);
+      return color;
+    }
+
+    function aqiFromPM(pm) {
+      if (isNaN(pm)) return "-";
+      if (pm == undefined) return "-";
+      if (pm < 0) return pm;
+      if (pm > 1000) return "-";
+      /*      
+                Good                              0 - 50         0.0 - 15.0         0.0 – 12.0
+          Moderate                        51 - 100           >15.0 - 40        12.1 – 35.4
+          Unhealthy for Sensitive Groups   101 – 150     >40 – 65          35.5 – 55.4
+          Unhealthy                                 151 – 200         > 65 – 150       55.5 – 150.4
+          Very Unhealthy                    201 – 300 > 150 – 250     150.5 – 250.4
+          Hazardous                                 301 – 400         > 250 – 350     250.5 – 350.4
+          Hazardous                                 401 – 500         > 350 – 500     350.5 – 500
+          */
+      if (pm > 350.5) {
+        return calcAQI(pm, 500, 401, 500, 350.5);
+      } else if (pm > 250.5) {
+        return calcAQI(pm, 400, 301, 350.4, 250.5);
+      } else if (pm > 150.5) {
+        return calcAQI(pm, 300, 201, 250.4, 150.5);
+      } else if (pm > 55.5) {
+        return calcAQI(pm, 200, 151, 150.4, 55.5);
+      } else if (pm > 35.5) {
+        return calcAQI(pm, 150, 101, 55.4, 35.5);
+      } else if (pm > 12.1) {
+        return calcAQI(pm, 100, 51, 35.4, 12.1);
+      } else if (pm >= 0) {
+        return calcAQI(pm, 50, 0, 12, 0);
+      } else {
+        return undefined;
+      }
+    }
+
+    function calcAQI(Cp, Ih, Il, BPh, BPl) {
+      var a = Ih - Il;
+      var b = BPh - BPl;
+      var c = Cp - BPl;
+      return Math.round((a / b) * c + Il);
+    }
+
+    function getAQIDescription(aqi) {
+      if (aqi >= 401) {
+        return "Hazardous";
+      } else if (aqi >= 301) {
+        return "Hazardous";
+      } else if (aqi >= 201) {
+        return "Very Unhealthy";
+      } else if (aqi >= 151) {
+        return "Unhealthy";
+      } else if (aqi >= 101) {
+        return "Unhealthy for Sensitive Groups";
+      } else if (aqi >= 51) {
+        return "Moderate";
+      } else if (aqi >= 0) {
+        return "Good";
+      } else {
+        return undefined;
+      }
+    }
+
+    function getAQIMessage(aqi) {
+      if (aqi >= 401) {
+        return ">401: Health alert: everyone may experience more serious health effects";
+      } else if (aqi >= 301) {
+        return "301-400: Health alert: everyone may experience more serious health effects";
+      } else if (aqi >= 201) {
+        return "201-300: Health warnings of emergency conditions. The entire population is more likely to be affected. ";
+      } else if (aqi >= 151) {
+        return "151-200: Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects.";
+      } else if (aqi >= 101) {
+        return "101-150: Members of sensitive groups may experience health effects. The general public is not likely to be affected.";
+      } else if (aqi >= 51) {
+        return "51-100: Air quality is acceptable; however, for some pollutants there may be a moderate health concern for a very small number of people who are unusually sensitive to air pollution.";
+      } else if (aqi >= 0) {
+        return "0-50: Air quality is considered satisfactory, and air pollution poses little or no risk";
+      } else {
+        return undefined;
+      }
+    }
+
+    /* src/Dot.svelte generated by Svelte v3.25.1 */
+    const file = "src/Dot.svelte";
+
+    function create_fragment(ctx) {
+    	let div;
+    	let svg;
+    	let circle;
+    	let circle_fill_value;
+    	let text_1;
+    	let t0;
+    	let t1;
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			svg = svg_element("svg");
+    			circle = svg_element("circle");
+    			text_1 = svg_element("text");
+    			t0 = text(/*aqi*/ ctx[0]);
+    			t1 = text("\n  Sorry, your browser does not support inline SVG.");
+    			attr_dev(circle, "cx", "100");
+    			attr_dev(circle, "cy", "100");
+    			attr_dev(circle, "r", "100");
+    			attr_dev(circle, "fill", circle_fill_value = getAQIcolor(/*aqi*/ ctx[0]));
+    			add_location(circle, file, 49, 4, 1038);
+    			attr_dev(text_1, "alignment-baseline", "central");
+    			attr_dev(text_1, "text-anchor", "middle");
+    			attr_dev(text_1, "fill", "white");
+    			attr_dev(text_1, "font-size", "100");
+    			attr_dev(text_1, "x", "100");
+    			attr_dev(text_1, "y", "100");
+    			add_location(text_1, file, 50, 4, 1103);
+    			attr_dev(svg, "viewBox", "0 0 200 200");
+    			attr_dev(svg, "class", "svelte-1u8eox5");
+    			add_location(svg, file, 48, 2, 1006);
+    			attr_dev(div, "class", "container svelte-1u8eox5");
+    			add_location(div, file, 47, 0, 980);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    			append_dev(div, svg);
+    			append_dev(svg, circle);
+    			append_dev(svg, text_1);
+    			append_dev(text_1, t0);
+    			append_dev(svg, t1);
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (dirty & /*aqi*/ 1 && circle_fill_value !== (circle_fill_value = getAQIcolor(/*aqi*/ ctx[0]))) {
+    				attr_dev(circle, "fill", circle_fill_value);
+    			}
+
+    			if (dirty & /*aqi*/ 1) set_data_dev(t0, /*aqi*/ ctx[0]);
+    		},
+    		i: noop,
+    		o: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Dot", slots, []);
+    	let { aqi } = $$props;
+    	const writable_props = ["aqi"];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Dot> was created with unknown prop '${key}'`);
+    	});
+
+    	$$self.$$set = $$props => {
+    		if ("aqi" in $$props) $$invalidate(0, aqi = $$props.aqi);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		aqi,
+    		interpolateRgbBasis: rgbBasis,
+    		getAQIDescription,
+    		getAQIMessage,
+    		getAQIcolor
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ("aqi" in $$props) $$invalidate(0, aqi = $$props.aqi);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [aqi];
+    }
+
+    class Dot extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance, create_fragment, safe_not_equal, { aqi: 0 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Dot",
+    			options,
+    			id: create_fragment.name
+    		});
+
+    		const { ctx } = this.$$;
+    		const props = options.props || {};
+
+    		if (/*aqi*/ ctx[0] === undefined && !("aqi" in props)) {
+    			console.warn("<Dot> was created without expected prop 'aqi'");
+    		}
+    	}
+
+    	get aqi() {
+    		throw new Error("<Dot>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set aqi(value) {
+    		throw new Error("<Dot>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
     }
 
     var bind = function bind(fn, thisArg) {
@@ -726,7 +1468,7 @@ var app = (function () {
      * @param {Object} thisArg The object to bind function to
      * @return {Object} The resulting value of object a
      */
-    function extend(a, b, thisArg) {
+    function extend$1(a, b, thisArg) {
       forEach(b, function assignValue(val, key) {
         if (thisArg && typeof val === 'function') {
           a[key] = bind(val, thisArg);
@@ -770,7 +1512,7 @@ var app = (function () {
       isStandardBrowserEnv: isStandardBrowserEnv,
       forEach: forEach,
       merge: merge,
-      extend: extend,
+      extend: extend$1,
       trim: trim,
       stripBOM: stripBOM
     };
@@ -1896,36 +2638,36 @@ var app = (function () {
 
     }
 
-    function aqanduAQIFromPM(pm) {
-        return aqiFromPM(0.778 * pm + 2.65);
+    function aqanduAQIFromPM$1(pm) {
+        return aqiFromPM$1(0.778 * pm + 2.65);
     }
 
-    function aqiFromPM(pm) {
+    function aqiFromPM$1(pm) {
         if (isNaN(pm)) return "-";
         if (pm == undefined) return "-";
         if (pm < 0) return pm;
         if (pm > 1000) return "-";
 
         if (pm > 350.5) {
-            return calcAQI(pm, 500, 401, 500, 350.5);
+            return calcAQI$1(pm, 500, 401, 500, 350.5);
         } else if (pm > 250.5) {
-            return calcAQI(pm, 400, 301, 350.4, 250.5);
+            return calcAQI$1(pm, 400, 301, 350.4, 250.5);
         } else if (pm > 150.5) {
-            return calcAQI(pm, 300, 201, 250.4, 150.5);
+            return calcAQI$1(pm, 300, 201, 250.4, 150.5);
         } else if (pm > 55.5) {
-            return calcAQI(pm, 200, 151, 150.4, 55.5);
+            return calcAQI$1(pm, 200, 151, 150.4, 55.5);
         } else if (pm > 35.5) {
-            return calcAQI(pm, 150, 101, 55.4, 35.5);
+            return calcAQI$1(pm, 150, 101, 55.4, 35.5);
         } else if (pm > 12.1) {
-            return calcAQI(pm, 100, 51, 35.4, 12.1);
+            return calcAQI$1(pm, 100, 51, 35.4, 12.1);
         } else if (pm >= 0) {
-            return calcAQI(pm, 50, 0, 12, 0);
+            return calcAQI$1(pm, 50, 0, 12, 0);
         } else {
             return undefined;
         }
     }
 
-    function calcAQI(Cp, Ih, Il, BPh, BPl) {
+    function calcAQI$1(Cp, Ih, Il, BPh, BPl) {
         // The AQI equation https://forum.airnowtech.org/t/the-aqi-equation/169
         var a = Ih - Il;
         var b = BPh - BPl;
@@ -1967,450 +2709,49 @@ var app = (function () {
             }
         }
         const pm25 = pm25s.reduce((a, b) => a + b) / pm25s.length;
-        return aqanduAQIFromPM(pm25);
+        return aqanduAQIFromPM$1(pm25);
     }
+
+    function getAQIStats(sensor) { 
+        let val = JSON.parse(sensor['results'][0]['Stats']);
+        let stats  = [
+            {time:'10m', val: val.v1},
+            {time:'30m', val:  val.v2},
+            {time:'60m', val:  val.v3},
+            {time:'6hr', val:  val.v4},
+            {time:'24hr', val:  val.v5},
+            {time:'1wk', val:  val.v6},
+        ];
+        console.log(stats);
+        return stats;
+    }
+
+
+    // async function getAQIhour(sensor) { 
+    //     let pm25s = [];
+    //     const pm25hr
+    // }
 
     var aqi = {
         getSensor: getSensor,
         getAQI: getAQI,
         getAQIClass: getAQIClass,
+        getAQIStats: getAQIStats
     };
-
-    function define(constructor, factory, prototype) {
-      constructor.prototype = factory.prototype = prototype;
-      prototype.constructor = constructor;
-    }
-
-    function extend$1(parent, definition) {
-      var prototype = Object.create(parent.prototype);
-      for (var key in definition) prototype[key] = definition[key];
-      return prototype;
-    }
-
-    function Color() {}
-
-    var darker = 0.7;
-    var brighter = 1 / darker;
-
-    var reI = "\\s*([+-]?\\d+)\\s*",
-        reN = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)\\s*",
-        reP = "\\s*([+-]?\\d*\\.?\\d+(?:[eE][+-]?\\d+)?)%\\s*",
-        reHex = /^#([0-9a-f]{3,8})$/,
-        reRgbInteger = new RegExp("^rgb\\(" + [reI, reI, reI] + "\\)$"),
-        reRgbPercent = new RegExp("^rgb\\(" + [reP, reP, reP] + "\\)$"),
-        reRgbaInteger = new RegExp("^rgba\\(" + [reI, reI, reI, reN] + "\\)$"),
-        reRgbaPercent = new RegExp("^rgba\\(" + [reP, reP, reP, reN] + "\\)$"),
-        reHslPercent = new RegExp("^hsl\\(" + [reN, reP, reP] + "\\)$"),
-        reHslaPercent = new RegExp("^hsla\\(" + [reN, reP, reP, reN] + "\\)$");
-
-    var named = {
-      aliceblue: 0xf0f8ff,
-      antiquewhite: 0xfaebd7,
-      aqua: 0x00ffff,
-      aquamarine: 0x7fffd4,
-      azure: 0xf0ffff,
-      beige: 0xf5f5dc,
-      bisque: 0xffe4c4,
-      black: 0x000000,
-      blanchedalmond: 0xffebcd,
-      blue: 0x0000ff,
-      blueviolet: 0x8a2be2,
-      brown: 0xa52a2a,
-      burlywood: 0xdeb887,
-      cadetblue: 0x5f9ea0,
-      chartreuse: 0x7fff00,
-      chocolate: 0xd2691e,
-      coral: 0xff7f50,
-      cornflowerblue: 0x6495ed,
-      cornsilk: 0xfff8dc,
-      crimson: 0xdc143c,
-      cyan: 0x00ffff,
-      darkblue: 0x00008b,
-      darkcyan: 0x008b8b,
-      darkgoldenrod: 0xb8860b,
-      darkgray: 0xa9a9a9,
-      darkgreen: 0x006400,
-      darkgrey: 0xa9a9a9,
-      darkkhaki: 0xbdb76b,
-      darkmagenta: 0x8b008b,
-      darkolivegreen: 0x556b2f,
-      darkorange: 0xff8c00,
-      darkorchid: 0x9932cc,
-      darkred: 0x8b0000,
-      darksalmon: 0xe9967a,
-      darkseagreen: 0x8fbc8f,
-      darkslateblue: 0x483d8b,
-      darkslategray: 0x2f4f4f,
-      darkslategrey: 0x2f4f4f,
-      darkturquoise: 0x00ced1,
-      darkviolet: 0x9400d3,
-      deeppink: 0xff1493,
-      deepskyblue: 0x00bfff,
-      dimgray: 0x696969,
-      dimgrey: 0x696969,
-      dodgerblue: 0x1e90ff,
-      firebrick: 0xb22222,
-      floralwhite: 0xfffaf0,
-      forestgreen: 0x228b22,
-      fuchsia: 0xff00ff,
-      gainsboro: 0xdcdcdc,
-      ghostwhite: 0xf8f8ff,
-      gold: 0xffd700,
-      goldenrod: 0xdaa520,
-      gray: 0x808080,
-      green: 0x008000,
-      greenyellow: 0xadff2f,
-      grey: 0x808080,
-      honeydew: 0xf0fff0,
-      hotpink: 0xff69b4,
-      indianred: 0xcd5c5c,
-      indigo: 0x4b0082,
-      ivory: 0xfffff0,
-      khaki: 0xf0e68c,
-      lavender: 0xe6e6fa,
-      lavenderblush: 0xfff0f5,
-      lawngreen: 0x7cfc00,
-      lemonchiffon: 0xfffacd,
-      lightblue: 0xadd8e6,
-      lightcoral: 0xf08080,
-      lightcyan: 0xe0ffff,
-      lightgoldenrodyellow: 0xfafad2,
-      lightgray: 0xd3d3d3,
-      lightgreen: 0x90ee90,
-      lightgrey: 0xd3d3d3,
-      lightpink: 0xffb6c1,
-      lightsalmon: 0xffa07a,
-      lightseagreen: 0x20b2aa,
-      lightskyblue: 0x87cefa,
-      lightslategray: 0x778899,
-      lightslategrey: 0x778899,
-      lightsteelblue: 0xb0c4de,
-      lightyellow: 0xffffe0,
-      lime: 0x00ff00,
-      limegreen: 0x32cd32,
-      linen: 0xfaf0e6,
-      magenta: 0xff00ff,
-      maroon: 0x800000,
-      mediumaquamarine: 0x66cdaa,
-      mediumblue: 0x0000cd,
-      mediumorchid: 0xba55d3,
-      mediumpurple: 0x9370db,
-      mediumseagreen: 0x3cb371,
-      mediumslateblue: 0x7b68ee,
-      mediumspringgreen: 0x00fa9a,
-      mediumturquoise: 0x48d1cc,
-      mediumvioletred: 0xc71585,
-      midnightblue: 0x191970,
-      mintcream: 0xf5fffa,
-      mistyrose: 0xffe4e1,
-      moccasin: 0xffe4b5,
-      navajowhite: 0xffdead,
-      navy: 0x000080,
-      oldlace: 0xfdf5e6,
-      olive: 0x808000,
-      olivedrab: 0x6b8e23,
-      orange: 0xffa500,
-      orangered: 0xff4500,
-      orchid: 0xda70d6,
-      palegoldenrod: 0xeee8aa,
-      palegreen: 0x98fb98,
-      paleturquoise: 0xafeeee,
-      palevioletred: 0xdb7093,
-      papayawhip: 0xffefd5,
-      peachpuff: 0xffdab9,
-      peru: 0xcd853f,
-      pink: 0xffc0cb,
-      plum: 0xdda0dd,
-      powderblue: 0xb0e0e6,
-      purple: 0x800080,
-      rebeccapurple: 0x663399,
-      red: 0xff0000,
-      rosybrown: 0xbc8f8f,
-      royalblue: 0x4169e1,
-      saddlebrown: 0x8b4513,
-      salmon: 0xfa8072,
-      sandybrown: 0xf4a460,
-      seagreen: 0x2e8b57,
-      seashell: 0xfff5ee,
-      sienna: 0xa0522d,
-      silver: 0xc0c0c0,
-      skyblue: 0x87ceeb,
-      slateblue: 0x6a5acd,
-      slategray: 0x708090,
-      slategrey: 0x708090,
-      snow: 0xfffafa,
-      springgreen: 0x00ff7f,
-      steelblue: 0x4682b4,
-      tan: 0xd2b48c,
-      teal: 0x008080,
-      thistle: 0xd8bfd8,
-      tomato: 0xff6347,
-      turquoise: 0x40e0d0,
-      violet: 0xee82ee,
-      wheat: 0xf5deb3,
-      white: 0xffffff,
-      whitesmoke: 0xf5f5f5,
-      yellow: 0xffff00,
-      yellowgreen: 0x9acd32
-    };
-
-    define(Color, color, {
-      copy: function(channels) {
-        return Object.assign(new this.constructor, this, channels);
-      },
-      displayable: function() {
-        return this.rgb().displayable();
-      },
-      hex: color_formatHex, // Deprecated! Use color.formatHex.
-      formatHex: color_formatHex,
-      formatHsl: color_formatHsl,
-      formatRgb: color_formatRgb,
-      toString: color_formatRgb
-    });
-
-    function color_formatHex() {
-      return this.rgb().formatHex();
-    }
-
-    function color_formatHsl() {
-      return hslConvert(this).formatHsl();
-    }
-
-    function color_formatRgb() {
-      return this.rgb().formatRgb();
-    }
-
-    function color(format) {
-      var m, l;
-      format = (format + "").trim().toLowerCase();
-      return (m = reHex.exec(format)) ? (l = m[1].length, m = parseInt(m[1], 16), l === 6 ? rgbn(m) // #ff0000
-          : l === 3 ? new Rgb((m >> 8 & 0xf) | (m >> 4 & 0xf0), (m >> 4 & 0xf) | (m & 0xf0), ((m & 0xf) << 4) | (m & 0xf), 1) // #f00
-          : l === 8 ? rgba(m >> 24 & 0xff, m >> 16 & 0xff, m >> 8 & 0xff, (m & 0xff) / 0xff) // #ff000000
-          : l === 4 ? rgba((m >> 12 & 0xf) | (m >> 8 & 0xf0), (m >> 8 & 0xf) | (m >> 4 & 0xf0), (m >> 4 & 0xf) | (m & 0xf0), (((m & 0xf) << 4) | (m & 0xf)) / 0xff) // #f000
-          : null) // invalid hex
-          : (m = reRgbInteger.exec(format)) ? new Rgb(m[1], m[2], m[3], 1) // rgb(255, 0, 0)
-          : (m = reRgbPercent.exec(format)) ? new Rgb(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, 1) // rgb(100%, 0%, 0%)
-          : (m = reRgbaInteger.exec(format)) ? rgba(m[1], m[2], m[3], m[4]) // rgba(255, 0, 0, 1)
-          : (m = reRgbaPercent.exec(format)) ? rgba(m[1] * 255 / 100, m[2] * 255 / 100, m[3] * 255 / 100, m[4]) // rgb(100%, 0%, 0%, 1)
-          : (m = reHslPercent.exec(format)) ? hsla(m[1], m[2] / 100, m[3] / 100, 1) // hsl(120, 50%, 50%)
-          : (m = reHslaPercent.exec(format)) ? hsla(m[1], m[2] / 100, m[3] / 100, m[4]) // hsla(120, 50%, 50%, 1)
-          : named.hasOwnProperty(format) ? rgbn(named[format]) // eslint-disable-line no-prototype-builtins
-          : format === "transparent" ? new Rgb(NaN, NaN, NaN, 0)
-          : null;
-    }
-
-    function rgbn(n) {
-      return new Rgb(n >> 16 & 0xff, n >> 8 & 0xff, n & 0xff, 1);
-    }
-
-    function rgba(r, g, b, a) {
-      if (a <= 0) r = g = b = NaN;
-      return new Rgb(r, g, b, a);
-    }
-
-    function rgbConvert(o) {
-      if (!(o instanceof Color)) o = color(o);
-      if (!o) return new Rgb;
-      o = o.rgb();
-      return new Rgb(o.r, o.g, o.b, o.opacity);
-    }
-
-    function rgb(r, g, b, opacity) {
-      return arguments.length === 1 ? rgbConvert(r) : new Rgb(r, g, b, opacity == null ? 1 : opacity);
-    }
-
-    function Rgb(r, g, b, opacity) {
-      this.r = +r;
-      this.g = +g;
-      this.b = +b;
-      this.opacity = +opacity;
-    }
-
-    define(Rgb, rgb, extend$1(Color, {
-      brighter: function(k) {
-        k = k == null ? brighter : Math.pow(brighter, k);
-        return new Rgb(this.r * k, this.g * k, this.b * k, this.opacity);
-      },
-      darker: function(k) {
-        k = k == null ? darker : Math.pow(darker, k);
-        return new Rgb(this.r * k, this.g * k, this.b * k, this.opacity);
-      },
-      rgb: function() {
-        return this;
-      },
-      displayable: function() {
-        return (-0.5 <= this.r && this.r < 255.5)
-            && (-0.5 <= this.g && this.g < 255.5)
-            && (-0.5 <= this.b && this.b < 255.5)
-            && (0 <= this.opacity && this.opacity <= 1);
-      },
-      hex: rgb_formatHex, // Deprecated! Use color.formatHex.
-      formatHex: rgb_formatHex,
-      formatRgb: rgb_formatRgb,
-      toString: rgb_formatRgb
-    }));
-
-    function rgb_formatHex() {
-      return "#" + hex(this.r) + hex(this.g) + hex(this.b);
-    }
-
-    function rgb_formatRgb() {
-      var a = this.opacity; a = isNaN(a) ? 1 : Math.max(0, Math.min(1, a));
-      return (a === 1 ? "rgb(" : "rgba(")
-          + Math.max(0, Math.min(255, Math.round(this.r) || 0)) + ", "
-          + Math.max(0, Math.min(255, Math.round(this.g) || 0)) + ", "
-          + Math.max(0, Math.min(255, Math.round(this.b) || 0))
-          + (a === 1 ? ")" : ", " + a + ")");
-    }
-
-    function hex(value) {
-      value = Math.max(0, Math.min(255, Math.round(value) || 0));
-      return (value < 16 ? "0" : "") + value.toString(16);
-    }
-
-    function hsla(h, s, l, a) {
-      if (a <= 0) h = s = l = NaN;
-      else if (l <= 0 || l >= 1) h = s = NaN;
-      else if (s <= 0) h = NaN;
-      return new Hsl(h, s, l, a);
-    }
-
-    function hslConvert(o) {
-      if (o instanceof Hsl) return new Hsl(o.h, o.s, o.l, o.opacity);
-      if (!(o instanceof Color)) o = color(o);
-      if (!o) return new Hsl;
-      if (o instanceof Hsl) return o;
-      o = o.rgb();
-      var r = o.r / 255,
-          g = o.g / 255,
-          b = o.b / 255,
-          min = Math.min(r, g, b),
-          max = Math.max(r, g, b),
-          h = NaN,
-          s = max - min,
-          l = (max + min) / 2;
-      if (s) {
-        if (r === max) h = (g - b) / s + (g < b) * 6;
-        else if (g === max) h = (b - r) / s + 2;
-        else h = (r - g) / s + 4;
-        s /= l < 0.5 ? max + min : 2 - max - min;
-        h *= 60;
-      } else {
-        s = l > 0 && l < 1 ? 0 : h;
-      }
-      return new Hsl(h, s, l, o.opacity);
-    }
-
-    function hsl(h, s, l, opacity) {
-      return arguments.length === 1 ? hslConvert(h) : new Hsl(h, s, l, opacity == null ? 1 : opacity);
-    }
-
-    function Hsl(h, s, l, opacity) {
-      this.h = +h;
-      this.s = +s;
-      this.l = +l;
-      this.opacity = +opacity;
-    }
-
-    define(Hsl, hsl, extend$1(Color, {
-      brighter: function(k) {
-        k = k == null ? brighter : Math.pow(brighter, k);
-        return new Hsl(this.h, this.s, this.l * k, this.opacity);
-      },
-      darker: function(k) {
-        k = k == null ? darker : Math.pow(darker, k);
-        return new Hsl(this.h, this.s, this.l * k, this.opacity);
-      },
-      rgb: function() {
-        var h = this.h % 360 + (this.h < 0) * 360,
-            s = isNaN(h) || isNaN(this.s) ? 0 : this.s,
-            l = this.l,
-            m2 = l + (l < 0.5 ? l : 1 - l) * s,
-            m1 = 2 * l - m2;
-        return new Rgb(
-          hsl2rgb(h >= 240 ? h - 240 : h + 120, m1, m2),
-          hsl2rgb(h, m1, m2),
-          hsl2rgb(h < 120 ? h + 240 : h - 120, m1, m2),
-          this.opacity
-        );
-      },
-      displayable: function() {
-        return (0 <= this.s && this.s <= 1 || isNaN(this.s))
-            && (0 <= this.l && this.l <= 1)
-            && (0 <= this.opacity && this.opacity <= 1);
-      },
-      formatHsl: function() {
-        var a = this.opacity; a = isNaN(a) ? 1 : Math.max(0, Math.min(1, a));
-        return (a === 1 ? "hsl(" : "hsla(")
-            + (this.h || 0) + ", "
-            + (this.s || 0) * 100 + "%, "
-            + (this.l || 0) * 100 + "%"
-            + (a === 1 ? ")" : ", " + a + ")");
-      }
-    }));
-
-    /* From FvD 13.37, CSS Color Module Level 3 */
-    function hsl2rgb(h, m1, m2) {
-      return (h < 60 ? m1 + (m2 - m1) * h / 60
-          : h < 180 ? m2
-          : h < 240 ? m1 + (m2 - m1) * (240 - h) / 60
-          : m1) * 255;
-    }
-
-    function basis(t1, v0, v1, v2, v3) {
-      var t2 = t1 * t1, t3 = t2 * t1;
-      return ((1 - 3 * t1 + 3 * t2 - t3) * v0
-          + (4 - 6 * t2 + 3 * t3) * v1
-          + (1 + 3 * t1 + 3 * t2 - 3 * t3) * v2
-          + t3 * v3) / 6;
-    }
-
-    function basis$1(values) {
-      var n = values.length - 1;
-      return function(t) {
-        var i = t <= 0 ? (t = 0) : t >= 1 ? (t = 1, n - 1) : Math.floor(t * n),
-            v1 = values[i],
-            v2 = values[i + 1],
-            v0 = i > 0 ? values[i - 1] : 2 * v1 - v2,
-            v3 = i < n - 1 ? values[i + 2] : 2 * v2 - v1;
-        return basis((t - i / n) * n, v0, v1, v2, v3);
-      };
-    }
-
-    function rgbSpline(spline) {
-      return function(colors) {
-        var n = colors.length,
-            r = new Array(n),
-            g = new Array(n),
-            b = new Array(n),
-            i, color;
-        for (i = 0; i < n; ++i) {
-          color = rgb(colors[i]);
-          r[i] = color.r || 0;
-          g[i] = color.g || 0;
-          b[i] = color.b || 0;
-        }
-        r = spline(r);
-        g = spline(g);
-        b = spline(b);
-        color.opacity = 1;
-        return function(t) {
-          color.r = r(t);
-          color.g = g(t);
-          color.b = b(t);
-          return color + "";
-        };
-      };
-    }
-
-    var rgbBasis = rgbSpline(basis$1);
 
     /* src/App.svelte generated by Svelte v3.25.1 */
 
-    const { console: console_1 } = globals;
-    const file = "src/App.svelte";
+    const { Object: Object_1, console: console_1 } = globals;
+    const file$1 = "src/App.svelte";
 
-    // (91:2) {:catch error}
+    function get_each_context(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[2] = list[i][0];
+    	child_ctx[3] = list[i][1];
+    	return child_ctx;
+    }
+
+    // (73:2) {:catch error}
     function create_catch_block(ctx) {
     	let p;
 
@@ -2418,13 +2759,14 @@ var app = (function () {
     		c: function create() {
     			p = element("p");
     			p.textContent = "error";
-    			attr_dev(p, "class", "svelte-b9t5pv");
-    			add_location(p, file, 91, 4, 1758);
+    			add_location(p, file$1, 73, 4, 1602);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
     		},
     		p: noop,
+    		i: noop,
+    		o: noop,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(p);
     		}
@@ -2434,53 +2776,142 @@ var app = (function () {
     		block,
     		id: create_catch_block.name,
     		type: "catch",
-    		source: "(91:2) {:catch error}",
+    		source: "(73:2) {:catch error}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (85:2) {:then data}
+    // (54:2) {:then data}
     function create_then_block(ctx) {
-    	let div;
-    	let p0;
-    	let t0_value = /*data*/ ctx[2].aqi + "";
+    	let big;
+    	let dot;
     	let t0;
+    	let p0;
+    	let t1_value = getAQIDescription(/*data*/ ctx[1].aqi) + "";
     	let t1;
-    	let p1;
-    	let t2_value = /*data*/ ctx[2].aqiClass + "";
     	let t2;
+    	let p1;
+    	let t3_value = getAQIMessage(/*data*/ ctx[1].aqi) + "";
+    	let t3;
+    	let t4;
+    	let div;
+    	let current;
+
+    	dot = new Dot({
+    			props: { aqi: /*data*/ ctx[1].aqi, time: "Now" },
+    			$$inline: true
+    		});
+
+    	let each_value = Object.entries(/*data*/ ctx[1].previous);
+    	validate_each_argument(each_value);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    	}
+
+    	const out = i => transition_out(each_blocks[i], 1, 1, () => {
+    		each_blocks[i] = null;
+    	});
 
     	const block = {
     		c: function create() {
-    			div = element("div");
+    			big = element("big");
+    			create_component(dot.$$.fragment);
+    			t0 = space();
     			p0 = element("p");
-    			t0 = text(t0_value);
-    			t1 = space();
+    			t1 = text(t1_value);
+    			t2 = space();
     			p1 = element("p");
-    			t2 = text(t2_value);
-    			attr_dev(p0, "class", "svelte-b9t5pv");
-    			add_location(p0, file, 86, 6, 1680);
-    			set_style(div, "--bg", /*getAQIcolor*/ ctx[1](/*data*/ ctx[2].aqi));
-    			attr_dev(div, "class", "svelte-b9t5pv");
-    			add_location(div, file, 85, 4, 1630);
-    			attr_dev(p1, "class", "svelte-b9t5pv");
-    			add_location(p1, file, 88, 4, 1713);
+    			t3 = text(t3_value);
+    			t4 = space();
+    			div = element("div");
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			add_location(p0, file$1, 56, 6, 1166);
+    			add_location(p1, file$1, 57, 6, 1209);
+    			add_location(big, file$1, 54, 4, 1114);
+    			attr_dev(div, "class", "flex-container svelte-144fiib");
+    			add_location(div, file$1, 62, 4, 1260);
     		},
     		m: function mount(target, anchor) {
+    			insert_dev(target, big, anchor);
+    			mount_component(dot, big, null);
+    			append_dev(big, t0);
+    			append_dev(big, p0);
+    			append_dev(p0, t1);
+    			append_dev(big, t2);
+    			append_dev(big, p1);
+    			append_dev(p1, t3);
+    			insert_dev(target, t4, anchor);
     			insert_dev(target, div, anchor);
-    			append_dev(div, p0);
-    			append_dev(p0, t0);
-    			insert_dev(target, t1, anchor);
-    			insert_dev(target, p1, anchor);
-    			append_dev(p1, t2);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(div, null);
+    			}
+
+    			current = true;
     		},
-    		p: noop,
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*aqiUpOrDown, sensorData, aqanduAQIFromPM, Object*/ 1) {
+    				each_value = Object.entries(/*data*/ ctx[1].previous);
+    				validate_each_argument(each_value);
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    						transition_in(each_blocks[i], 1);
+    					} else {
+    						each_blocks[i] = create_each_block(child_ctx);
+    						each_blocks[i].c();
+    						transition_in(each_blocks[i], 1);
+    						each_blocks[i].m(div, null);
+    					}
+    				}
+
+    				group_outros();
+
+    				for (i = each_value.length; i < each_blocks.length; i += 1) {
+    					out(i);
+    				}
+
+    				check_outros();
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(dot.$$.fragment, local);
+
+    			for (let i = 0; i < each_value.length; i += 1) {
+    				transition_in(each_blocks[i]);
+    			}
+
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(dot.$$.fragment, local);
+    			each_blocks = each_blocks.filter(Boolean);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				transition_out(each_blocks[i]);
+    			}
+
+    			current = false;
+    		},
     		d: function destroy(detaching) {
+    			if (detaching) detach_dev(big);
+    			destroy_component(dot);
+    			if (detaching) detach_dev(t4);
     			if (detaching) detach_dev(div);
-    			if (detaching) detach_dev(t1);
-    			if (detaching) detach_dev(p1);
+    			destroy_each(each_blocks, detaching);
     		}
     	};
 
@@ -2488,14 +2919,80 @@ var app = (function () {
     		block,
     		id: create_then_block.name,
     		type: "then",
-    		source: "(85:2) {:then data}",
+    		source: "(54:2) {:then data}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (83:17)      <p>...waiting</p>   {:then data}
+    // (64:6) {#each Object.entries(data.previous) as [time,val]}
+    function create_each_block(ctx) {
+    	let div;
+    	let dot;
+    	let t0;
+    	let p;
+    	let t1_value = /*time*/ ctx[2] + "";
+    	let t1;
+    	let t2;
+    	let current;
+
+    	dot = new Dot({
+    			props: { aqi: aqanduAQIFromPM(/*val*/ ctx[3]) },
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			create_component(dot.$$.fragment);
+    			t0 = space();
+    			p = element("p");
+    			t1 = text(t1_value);
+    			t2 = space();
+    			set_style(p, "height", "auto");
+    			set_style(p, "background-color", aqiUpOrDown(/*data*/ ctx[1].aqi, aqanduAQIFromPM(/*val*/ ctx[3])));
+    			add_location(p, file$1, 66, 10, 1428);
+    			attr_dev(div, "class", "sub svelte-144fiib");
+    			add_location(div, file$1, 64, 8, 1355);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    			mount_component(dot, div, null);
+    			append_dev(div, t0);
+    			append_dev(div, p);
+    			append_dev(p, t1);
+    			append_dev(div, t2);
+    			current = true;
+    		},
+    		p: noop,
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(dot.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(dot.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    			destroy_component(dot);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block.name,
+    		type: "each",
+    		source: "(64:6) {#each Object.entries(data.previous) as [time,val]}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (52:21)      <p>...waiting</p>   {:then data}
     function create_pending_block(ctx) {
     	let p;
 
@@ -2503,13 +3000,14 @@ var app = (function () {
     		c: function create() {
     			p = element("p");
     			p.textContent = "...waiting";
-    			attr_dev(p, "class", "svelte-b9t5pv");
-    			add_location(p, file, 83, 4, 1593);
+    			add_location(p, file$1, 52, 4, 1077);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
     		},
     		p: noop,
+    		i: noop,
+    		o: noop,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(p);
     		}
@@ -2519,16 +3017,17 @@ var app = (function () {
     		block,
     		id: create_pending_block.name,
     		type: "pending",
-    		source: "(83:17)      <p>...waiting</p>   {:then data}",
+    		source: "(52:21)      <p>...waiting</p>   {:then data}",
     		ctx
     	});
 
     	return block;
     }
 
-    function create_fragment(ctx) {
+    function create_fragment$1(ctx) {
     	let main;
     	let promise;
+    	let current;
 
     	let info = {
     		ctx,
@@ -2538,18 +3037,19 @@ var app = (function () {
     		pending: create_pending_block,
     		then: create_then_block,
     		catch: create_catch_block,
-    		value: 2,
-    		error: 3
+    		value: 1,
+    		error: 6,
+    		blocks: [,,,]
     	};
 
-    	handle_promise(promise = /*purple*/ ctx[0], info);
+    	handle_promise(promise = /*sensorData*/ ctx[0], info);
 
     	const block = {
     		c: function create() {
     			main = element("main");
     			info.block.c();
-    			attr_dev(main, "class", "svelte-b9t5pv");
-    			add_location(main, file, 81, 0, 1564);
+    			attr_dev(main, "class", "svelte-144fiib");
+    			add_location(main, file$1, 50, 0, 1044);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -2559,18 +3059,30 @@ var app = (function () {
     			info.block.m(main, info.anchor = null);
     			info.mount = () => main;
     			info.anchor = null;
+    			current = true;
     		},
     		p: function update(new_ctx, [dirty]) {
     			ctx = new_ctx;
 
     			{
     				const child_ctx = ctx.slice();
-    				child_ctx[2] = child_ctx[3] = info.resolved;
+    				child_ctx[1] = child_ctx[6] = info.resolved;
     				info.block.p(child_ctx, dirty);
     			}
     		},
-    		i: noop,
-    		o: noop,
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(info.block);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			for (let i = 0; i < 3; i += 1) {
+    				const block = info.blocks[i];
+    				transition_out(block);
+    			}
+
+    			current = false;
+    		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(main);
     			info.block.d();
@@ -2581,7 +3093,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment.name,
+    		id: create_fragment$1.name,
     		type: "component",
     		source: "",
     		ctx
@@ -2590,79 +3102,57 @@ var app = (function () {
     	return block;
     }
 
-    function instance($$self, $$props, $$invalidate) {
+    function instance$1($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots("App", slots, []);
 
-    	const purple = (async () => {
-    		//closer one
-    		//hill dr 56109
-    		var sensor = await aqi.getSensor(56109);
+    	const sensorData = (async () => {
+    		const response = await fetch("https://www.purpleair.com/json?show=56109");
+    		const json = await response.json();
+    		const pm = await json["results"][0]["PM2_5Value"];
+    		const stats = await JSON.parse(json["results"][0]["Stats"]);
 
-    		var aqi$1 = await aqi.getAQI(sensor);
-    		var aqiClass = await aqi.getAQIClass(aqi$1);
-    		console.log(aqi$1);
-
-    		let data = {
-    			aqi: await aqi.getAQI(sensor),
-    			aqiClass: await aqi.getAQIClass(aqi$1)
+    		let data = await {
+    			aqi: aqanduAQIFromPM(pm),
+    			previous: aqiStatParse(stats)
     		};
 
     		console.log(data);
     		return await data;
     	})();
 
-    	let getAQIcolor = function (c) {
-    		let color = rgbBasis([
-    			"green",
-    			"yellow",
-    			"orange",
-    			"red",
-    			"purple",
-    			"purple",
-    			"maroon",
-    			"maroon",
-    			"maroon",
-    			"maroon"
-    		])(c / 500);
-
-    		return color;
-    	};
-
     	const writable_props = [];
 
-    	Object.keys($$props).forEach(key => {
+    	Object_1.keys($$props).forEach(key => {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console_1.warn(`<App> was created with unknown prop '${key}'`);
     	});
 
     	$$self.$capture_state = () => ({
-    		purpleair: aqi,
-    		interpolateRgbBasis: rgbBasis,
-    		purple,
-    		getAQIcolor
+    		Dot,
+    		aqiUpOrDown,
+    		aqanduAQIFromPM,
+    		getAQIDescription,
+    		aqiStatParse,
+    		aqiColorParse,
+    		getAQIMessage,
+    		aqi,
+    		validate_component,
+    		sensorData
     	});
 
-    	$$self.$inject_state = $$props => {
-    		if ("getAQIcolor" in $$props) $$invalidate(1, getAQIcolor = $$props.getAQIcolor);
-    	};
-
-    	if ($$props && "$$inject" in $$props) {
-    		$$self.$inject_state($$props.$$inject);
-    	}
-
-    	return [purple, getAQIcolor];
+    	return [sensorData];
     }
 
     class App extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance, create_fragment, safe_not_equal, {});
+    		init(this, options, instance$1, create_fragment$1, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "App",
     			options,
-    			id: create_fragment.name
+    			id: create_fragment$1.name
     		});
     	}
     }

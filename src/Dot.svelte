@@ -1,23 +1,8 @@
 <script>
   export let aqi;
   import { interpolateRgbBasis } from "d3-interpolate";
-  import { aqanduAQIFromPM, getAQIDescription, getAQIMessage } from "./aqicalc";
+  import { getAQIDescription, getAQIMessage, getAQIcolor } from "./aqicalc";
 
-  let getAQIcolor = function(aqi) {
-    let color = interpolateRgbBasis([
-      "green",
-      "yellow",
-      "orange",
-      "red",
-      "purple",
-      "purple",
-      "maroon",
-      "maroon",
-      "maroon",
-      "maroon"
-    ])(aqi / 500);
-    return color;
-  };
 </script>
 
 <style>
@@ -42,16 +27,41 @@
     position: absolute;
     /* width: 100%;
     height: 100%; */
-    font-size: 20vw;
+    font-size: 40%;
     font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
       "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
   }
+  .container {
+    width: 100%;
+    /* height: 100%; */
+    padding-top:100%;
+    position:relative;
+  }
+  svg {
+    position:absolute; 
+    top: 0; 
+    left: 0;
+    padding-left: 1vw;
+  }
 </style>
 
-<div class="square" style="--bg: {getAQIcolor(aqi)}">
+<div class="container">
+  <svg viewbox="0 0 200 200">
+    <circle cx="100" cy="100" r="100" fill={getAQIcolor(aqi)} />
+    <text alignment-baseline="central" text-anchor="middle" fill="white" font-size="100"  x="100" y="100">{aqi}</text>
+  Sorry, your browser does not support inline SVG.
+  </svg>
+</div>
+
+<!-- <svg width="200" height = 200>
+  <circle cx="100" cy="100" fill="#1f77b4" r="100"></circle>
+  <text fill="white" x="100" y="100" font-size="120" >A</text>
+
+</svg> -->
+
+<!-- <div class="square" style="--bg: {getAQIcolor(aqi)}">
   <div class="content">
     <p>{aqi}</p>
   </div>
 
-</div>
-<p>{getAQIDescription(aqi)}</p>
+</div> -->

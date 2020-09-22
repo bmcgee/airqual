@@ -1,5 +1,65 @@
+import { interpolateRgbBasis } from "d3-interpolate";
+
+
 export function aqanduAQIFromPM(pm) {
   return aqiFromPM(0.778 * pm + 2.65);
+}
+
+export let getAQIcolor = function(aqi) {
+  let color = interpolateRgbBasis([
+    "green",
+    "yellow",
+    "orange",
+    "red",
+    "purple",
+    "purple",
+    "maroon",
+    "maroon",
+    "maroon",
+    "maroon"
+  ])(aqi / 500);
+  return color;
+};
+
+export let aqiUpOrDown = function(aqi, val) {
+  let c; 
+  if (aqi < val) { 
+    c = "green"
+  } 
+  if ( aqi > val) { 
+    c = "red"
+  }
+  return c;
+}
+
+export function aqiStatParse(stats) { 
+  let s = { 
+    // "current": stats['v'],
+    "10m": stats['v1'],
+    "30m": stats['v2'],
+    "01h": stats['v3'],
+    "06h": stats['v4'],
+    "24h": stats['v5'],
+    '01wk': stats['v6']
+  }
+  // console.log(s);
+  return s;
+}
+
+export function aqiColorParse(aqi) {
+  let color = interpolateRgbBasis([
+    "green",
+    "yellow",
+    "orange",
+    "red",
+    "purple",
+    "purple",
+    "maroon",
+    "maroon",
+    "maroon",
+    "maroon"
+  ])(aqi / 500);
+  return color;
 }
 
 function aqiFromPM(pm) {
