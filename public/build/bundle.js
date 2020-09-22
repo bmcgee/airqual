@@ -1042,24 +1042,24 @@ var app = (function () {
     			circle = svg_element("circle");
     			text_1 = svg_element("text");
     			t0 = text(/*aqi*/ ctx[0]);
-    			t1 = text("\n  Sorry, your browser does not support inline SVG.");
+    			t1 = text("\n    Sorry, your browser does not support inline SVG.");
     			attr_dev(circle, "cx", "100");
     			attr_dev(circle, "cy", "100");
     			attr_dev(circle, "r", "100");
     			attr_dev(circle, "fill", circle_fill_value = getAQIcolor(/*aqi*/ ctx[0]));
-    			add_location(circle, file, 49, 4, 1038);
+    			add_location(circle, file, 23, 4, 438);
     			attr_dev(text_1, "alignment-baseline", "central");
     			attr_dev(text_1, "text-anchor", "middle");
     			attr_dev(text_1, "fill", "white");
     			attr_dev(text_1, "font-size", "100");
     			attr_dev(text_1, "x", "100");
     			attr_dev(text_1, "y", "100");
-    			add_location(text_1, file, 50, 4, 1103);
+    			add_location(text_1, file, 24, 4, 503);
     			attr_dev(svg, "viewBox", "0 0 200 200");
-    			attr_dev(svg, "class", "svelte-1u8eox5");
-    			add_location(svg, file, 48, 2, 1006);
-    			attr_dev(div, "class", "container svelte-1u8eox5");
-    			add_location(div, file, 47, 0, 980);
+    			attr_dev(svg, "class", "svelte-145gmea");
+    			add_location(svg, file, 22, 2, 406);
+    			attr_dev(div, "class", "container svelte-145gmea");
+    			add_location(div, file, 21, 0, 380);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -2751,7 +2751,7 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (73:2) {:catch error}
+    // (75:2) {:catch error}
     function create_catch_block(ctx) {
     	let p;
 
@@ -2759,7 +2759,7 @@ var app = (function () {
     		c: function create() {
     			p = element("p");
     			p.textContent = "error";
-    			add_location(p, file$1, 73, 4, 1602);
+    			add_location(p, file$1, 75, 4, 1621);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
@@ -2776,14 +2776,14 @@ var app = (function () {
     		block,
     		id: create_catch_block.name,
     		type: "catch",
-    		source: "(73:2) {:catch error}",
+    		source: "(75:2) {:catch error}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (54:2) {:then data}
+    // (55:2) {:then data}
     function create_then_block(ctx) {
     	let big;
     	let dot;
@@ -2833,11 +2833,11 @@ var app = (function () {
     				each_blocks[i].c();
     			}
 
-    			add_location(p0, file$1, 56, 6, 1166);
-    			add_location(p1, file$1, 57, 6, 1209);
-    			add_location(big, file$1, 54, 4, 1114);
-    			attr_dev(div, "class", "flex-container svelte-144fiib");
-    			add_location(div, file$1, 62, 4, 1260);
+    			add_location(p0, file$1, 57, 6, 1161);
+    			add_location(p1, file$1, 58, 6, 1204);
+    			add_location(big, file$1, 55, 4, 1109);
+    			attr_dev(div, "class", "flex-container svelte-10wkwii");
+    			add_location(div, file$1, 62, 4, 1254);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, big, anchor);
@@ -2919,14 +2919,14 @@ var app = (function () {
     		block,
     		id: create_then_block.name,
     		type: "then",
-    		source: "(54:2) {:then data}",
+    		source: "(55:2) {:then data}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (64:6) {#each Object.entries(data.previous) as [time,val]}
+    // (64:6) {#each Object.entries(data.previous) as [time, val]}
     function create_each_block(ctx) {
     	let div;
     	let dot;
@@ -2952,9 +2952,9 @@ var app = (function () {
     			t2 = space();
     			set_style(p, "height", "auto");
     			set_style(p, "background-color", aqiUpOrDown(/*data*/ ctx[1].aqi, aqanduAQIFromPM(/*val*/ ctx[3])));
-    			add_location(p, file$1, 66, 10, 1428);
-    			attr_dev(div, "class", "sub svelte-144fiib");
-    			add_location(div, file$1, 64, 8, 1355);
+    			add_location(p, file$1, 66, 10, 1423);
+    			attr_dev(div, "class", "sub svelte-10wkwii");
+    			add_location(div, file$1, 64, 8, 1350);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -2985,14 +2985,14 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(64:6) {#each Object.entries(data.previous) as [time,val]}",
+    		source: "(64:6) {#each Object.entries(data.previous) as [time, val]}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (52:21)      <p>...waiting</p>   {:then data}
+    // (53:21)      <p>...waiting</p>   {:then data}
     function create_pending_block(ctx) {
     	let p;
 
@@ -3000,7 +3000,7 @@ var app = (function () {
     		c: function create() {
     			p = element("p");
     			p.textContent = "...waiting";
-    			add_location(p, file$1, 52, 4, 1077);
+    			add_location(p, file$1, 53, 4, 1072);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
@@ -3017,7 +3017,7 @@ var app = (function () {
     		block,
     		id: create_pending_block.name,
     		type: "pending",
-    		source: "(52:21)      <p>...waiting</p>   {:then data}",
+    		source: "(53:21)      <p>...waiting</p>   {:then data}",
     		ctx
     	});
 
@@ -3048,8 +3048,8 @@ var app = (function () {
     		c: function create() {
     			main = element("main");
     			info.block.c();
-    			attr_dev(main, "class", "svelte-144fiib");
-    			add_location(main, file$1, 50, 0, 1044);
+    			attr_dev(main, "class", "svelte-10wkwii");
+    			add_location(main, file$1, 51, 0, 1039);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
