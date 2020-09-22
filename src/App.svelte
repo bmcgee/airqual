@@ -1,5 +1,6 @@
 <script>
   import purpleair from "purpleair";
+  import Dot from "./Dot.svelte";
   import { interpolateRgbBasis } from "d3-interpolate";
   import { aqanduAQIFromPM } from "./aqicalc";
 
@@ -64,27 +65,10 @@
     font-size: 4em;
     font-weight: 100;
   }
-  div > p {
-    font-size: 30vw;
-  }
-  p {
-    font-size: 10vw;
-    font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
-      "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
-  }
-  div {
-    /* height: 5em;
-	width: 5em; */
-    margin: auto;
-    width: 70vw;
-    height: 70vw;
-    border-radius: 50%;
-    background-color: var(--bg);
-    display: flex;
-    justify-content: center; /* align horizontal */
-    align-items: center; /* align vertical */
-  }
 
+  .flex-container {
+    display: flex;
+  }
   @media (min-width: 640px) {
     main {
       max-width: none;
@@ -102,16 +86,16 @@
   {#await purple}
     <p>...waiting</p>
   {:then data}
-    <div style="--bg: {getAQIcolor(data.aqi)}">
-      <p>{data.aqi}</p>
+    <big>
+      <Dot aqi={data.aqi} />
+    </big>
+
+    <div class="flex-container">
+      {#each data.stats as stat}
+        <Dot aqi={aqanduAQIFromPM(stat.val)} />
+      {/each}
     </div>
-    <p>{data.aqiClass}</p>
-    {#each data.stats as stat}
-      <span>
-        Name: {stat.time} Value: {aqanduAQIFromPM(stat.val)}
-        <br />
-      </span>
-    {/each}
+
   {:catch error}
     <p>error</p>
   {/await}

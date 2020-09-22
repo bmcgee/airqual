@@ -105,7 +105,7 @@ function calcAQI(Cp, Ih, Il, BPh, BPl) {
   return Math.round((a / b) * c + Il);
 }
 
-function getAQIDescription(aqi) {
+export function getAQIDescription(aqi) {
   if (aqi >= 401) {
     return "Hazardous";
   } else if (aqi >= 301) {
@@ -125,7 +125,7 @@ function getAQIDescription(aqi) {
   }
 }
 
-function getAQIMessage(aqi) {
+export function getAQIMessage(aqi) {
   if (aqi >= 401) {
     return ">401: Health alert: everyone may experience more serious health effects";
   } else if (aqi >= 301) {
